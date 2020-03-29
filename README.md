@@ -1,4 +1,4 @@
 # Video Chat application
 
-Install all dependencies with npm install
-Run the server and client with npm start
+1. Install all dependencies with npm install
+2. Run the server and client with npm start
