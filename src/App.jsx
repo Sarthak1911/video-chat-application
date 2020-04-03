@@ -21,6 +21,12 @@ const Video = React.forwardRef((props, ref) => (
 class App extends Component {
   constructor(props) {
     super(props);
+
+    //intialize the Media recorder
+    this.mediaRecorder = null;
+    //blobs to store the video
+    this.blobs = [];
+
     this.state = {
       yourID: "",
       users: {},
@@ -28,7 +34,8 @@ class App extends Component {
       callAccepted: false,
       caller: "",
       recevingCall: false,
-      callerSignal: null
+      callerSignal: null,
+      recording: false
     };
     //declare the socket
     this.socket = null;
@@ -44,7 +51,7 @@ class App extends Component {
       this.socket = io.connect("http://localhost:4000");
 
       navigator.mediaDevices
-        .getUserMedia({ video: true, audio: true })
+        .getUserMedia({ video: true })
         .then(stream => {
           //set the state
           this.setState({ stream });
@@ -132,6 +139,62 @@ class App extends Component {
     });
   };
 
+  startRecording = async () => {
+    try {
+      //get the stream ready
+      this.stream = this.state.stream;
+      //configure the recording
+      let options = { mimeType: "video/webm; codecs=vp9" };
+      this.mediaRecorder = new MediaRecorder(this.stream, options);
+      //refrence the onDataavailable method
+      this.mediaRecorder.ondataavailable = this.dataAvailable;
+      //start the recording
+      this.mediaRecorder.start();
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  dataAvailable = event => {
+    console.log("data-available");
+    if (event.data.size > 0) {
+      this.blobs.push(event.data);
+      //download once the recording is ready
+      this.downloadRecording();
+    }
+  };
+
+  downloadRecording = () => {
+    var blob = new Blob(this.blobs, {
+      type: "video/webm"
+    });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    document.body.appendChild(a);
+    a.style = "display: none";
+    a.href = url;
+    a.download = "test.webm";
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  stopRecording = () => {
+    //stop recorder
+    this.mediaRecorder.stop();
+    //clear the blobs
+    this.blobs = [];
+  };
+
+  handleStartRecording = () => {
+    this.setState({ recording: true });
+    this.startRecording();
+  };
+
+  handleStopRecording = () => {
+    this.setState({ recording: false });
+    this.stopRecording();
+  };
+
   render() {
     const {
       users,
@@ -139,7 +202,8 @@ class App extends Component {
       stream,
       callAccepted,
       recevingCall,
-      caller
+      caller,
+      recording
     } = this.state;
 
     return (
@@ -178,6 +242,13 @@ class App extends Component {
               <h1>{caller} is calling you</h1>
               <button onClick={this.acceptCall}>Accept</button>
             </div>
+          )}
+        </div>
+        <div>
+          {!recording ? (
+            <button onClick={this.handleStartRecording}>Start Recording</button>
+          ) : (
+            <button onClick={this.handleStopRecording}>Stop Recording</button>
           )}
         </div>
       </div>

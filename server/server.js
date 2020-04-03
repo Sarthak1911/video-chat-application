@@ -40,6 +40,7 @@ io.on("connection", socket => {
   socket.on("disconnect", () => {
     console.log(`${users[socket.id]} is now offline!`);
     delete users[socket.id];
+    io.sockets.emit("allUsers", users);
   });
 });
 
